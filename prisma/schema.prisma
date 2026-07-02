@@ -1,0 +1,124 @@
+datasource db {
+  provider  = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  OWNER
+  WORKER
+  CLIENT
+}
+
+enum BookingStatus {
+  PENDING_PAYMENT
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+model Salon {
+  id        String    @id @default(uuid())
+  name      String
+  subdomain String    @unique // e.g., "duchessehair" for duchessehair.yourplatform.com
+  createdAt DateTime  @default(now())
+  
+  users     User[]
+  products  Product[]
+  services  Service[]
+  bookings  Booking[]
+}
+
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  password      String
+  name          String
+  phone         String         // Critical for M-Pesa STK push formatting (254...)
+  role          Role
+  salonId       String
+  salon         Salon          @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  
+  // Role-specific extensions
+  workerProfile WorkerProfile?
+  clientBookings Booking[]     @relation("ClientBookings")
+  
+  createdAt     DateTime       @default(now())
+}
+
+model WorkerProfile {
+  id           String    @id @default(uuid())
+  userId       String    @unique
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  commissionPct Float    // e.g., 20.0 for 20% commission per service
+  isAvailable  Boolean   @default(true)
+  
+  bookings     Booking[] @relation("WorkerBookings")
+}
+
+model Service {
+  id          String    @id @default(uuid())
+  salonId     String
+  salon       Salon     @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  name        String
+  duration    Int       // Duration in minutes (e.g., 120 for 2 hours)
+  price       Decimal
+  bookings    Booking[]
+}
+
+model Product {
+  id          String    @id @default(uuid())
+  salonId     String
+  salon       Salon     @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  name        String
+  price       Decimal
+  stockCount  Int
+}
+
+model Booking {
+  id          String        @id @default(uuid())
+  salonId     String
+  salon       Salon         @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  
+  clientId    String
+  client      User          @relation("ClientBookings", fields: [clientId], references: [id])
+  
+  workerId    String
+  worker      WorkerProfile @relation("WorkerBookings", fields: [workerId], references: [id])
+  
+  serviceId   String
+  service     Service       @relation(fields: [serviceId], references: [id])
+  
+  startTime   DateTime
+  endTime     DateTime      // Calculated dynamically on creation: startTime + service.duration
+  status      BookingStatus @default(PENDING_PAYMENT)
+  
+  // Daraja / M-Pesa Tracking Fields
+  mpesaCheckoutId String?   @unique // CheckoutRequestID returned from Daraja STK Push
+  mpesaReceiptCode String?  @unique // M-Pesa code returned on successful callback (e.g., QGR34RT6HX)
+  
+  // Post-service data
+  workerPayout EarnedCommission?
+  review       Review?
+
+  createdAt   DateTime      @default(now())
+}
+
+model EarnedCommission {
+  id        String   @id @default(uuid())
+  bookingId String   @unique
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  amount    Decimal
+  createdAt DateTime @default(now())
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  bookingId String   @unique
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  rating    Int      // 1 to 5 stars
+  comment   String?
+  createdAt DateTime @default(now())
+}
