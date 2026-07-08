@@ -20,6 +20,32 @@ export type AdminActivityEntry = {
   refId: string
 }
 
+export type DashboardSnapshot = {
+  salonName: string
+  todayLabel: string
+  bookingsToday: number
+  yesterdayDelta: number
+  dailyRevenue: number
+  activeWorkers: number
+  totalWorkers: number
+  confirmedOrdersToday: number
+  lowStockCount: number
+  outOfStockCount: number
+  recentPaidOrders: Array<{
+    id: string
+    clientName: string
+    totalAmount: number
+    createdAt: Date
+    itemSummary: string
+  }>
+  trendDays: Array<{
+    label: string
+    total: number
+    heightPercent: number
+  }>
+  recentActivity: AdminActivityEntry[]
+}
+
 const getAdminContext = cache(async () => {
   const session = await getServerSession(authOptions)
 
@@ -86,7 +112,11 @@ function endOfDay(date: Date) {
   return next
 }
 
-async function getSystemActivityLogsForSalon(salonId: string, limit = 40, searchQuery?: string) {
+async function getSystemActivityLogsForSalon(
+  salonId: string,
+  limit = 40,
+  searchQuery?: string
+): Promise<AdminActivityEntry[]> {
   const [bookings, orders, workerUsers, commissions] = await Promise.all([
     prisma.booking.findMany({
       where: {
@@ -225,7 +255,7 @@ async function getSystemActivityLogsForSalon(salonId: string, limit = 40, search
   return filtered.slice(0, limit)
 }
 
-export async function getDashboardSnapshot() {
+export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
   const { salon } = await requireAdminContext()
   const now = new Date()
   const todayStart = startOfDay(now)
@@ -391,7 +421,10 @@ export async function getDashboardSnapshot() {
   }
 }
 
-export async function getSystemActivityLogs(limit = 40, searchQuery?: string) {
+export async function getSystemActivityLogs(
+  limit = 40,
+  searchQuery?: string
+): Promise<AdminActivityEntry[]> {
   const { salon } = await requireAdminContext()
   return getSystemActivityLogsForSalon(salon.id, limit, searchQuery)
 }
