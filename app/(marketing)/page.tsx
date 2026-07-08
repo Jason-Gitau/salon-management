@@ -17,8 +17,30 @@ Mail,
 Clock,
 ArrowRight
 } from 'lucide-react';
+import { prisma } from '@/lib/prisma';
+import { ensurePrimarySalon } from '@/lib/salon';
+import { addProductToCartAction } from '@/app/actions/product-actions';
 
-export default function MarketingLandingPage() {
+function formatKes(value: number) {
+return new Intl.NumberFormat('en-KE', {
+style: 'currency',
+currency: 'KES',
+minimumFractionDigits: 2,
+maximumFractionDigits: 2,
+}).format(value);
+}
+
+export default async function MarketingLandingPage() {
+const salon = await ensurePrimarySalon();
+const featuredProducts = await prisma.product.findMany({
+where: {
+salonId: salon.id,
+},
+orderBy: {
+name: 'asc',
+},
+take: 3,
+});
 return (
 <>
 
@@ -241,64 +263,44 @@ return (
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        
-        {/* Product 1 */}
-        <div className="bg-[#fff9ef] border border-[#8d7167] group hover:bg-[#f9f3ea] transition-colors duration-300 flex flex-col h-full">
-          <div className="relative h-64 border-b border-[#8d7167] overflow-hidden bg-[#645d53]">
-            <img 
-              className="w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-500" 
-              src="https://images.unsplash.com/photo-1585232351009-aa87416fca90?auto=format&fit=crop&q=80&w=800" 
-              alt="Premium Shampoo"
-            />
+        {featuredProducts.length > 0 ? featuredProducts.map((product) => (
+          <div key={product.id} className="bg-[#fff9ef] border border-[#8d7167] group hover:bg-[#f9f3ea] transition-colors duration-300 flex flex-col h-full">
+            <div className="relative h-64 border-b border-[#8d7167] overflow-hidden bg-[#645d53]">
+              {product.imageUrl ? (
+                <img
+                  className="w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-500"
+                  src={product.imageUrl}
+                  alt={product.name}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-[#fff9ef] font-mono text-xs uppercase tracking-widest">
+                  No Image
+                </div>
+              )}
+            </div>
+            <div className="p-6 flex flex-col flex-grow text-center">
+              <h3 className="font-bold text-xl text-[#1d1b16] mb-2">{product.name}</h3>
+              <p className="text-sm text-[#5f5e5e] mb-6 flex-grow">{product.description || 'Premium salon retail product.'}</p>
+              <div className="text-[#a83a00] font-bold text-2xl mb-4 font-mono">{formatKes(Number(product.price))}</div>
+              {product.stockCount > 0 ? (
+                <form action={addProductToCartAction}>
+                  <input type="hidden" name="productId" value={product.id} />
+                  <button className="w-full bg-[#a83a00] text-white border border-[#8d7167] py-3 font-mono text-sm font-medium hover:bg-[#802a00] transition-colors">
+                    Add to Cart
+                  </button>
+                </form>
+              ) : (
+                <div className="w-full bg-[#1d1b16] text-white border border-[#8d7167] py-3 font-mono text-sm font-medium uppercase tracking-widest">
+                  Out of Stock
+                </div>
+              )}
+            </div>
           </div>
-          <div className="p-6 flex flex-col flex-grow text-center">
-            <h3 className="font-bold text-xl text-[#1d1b16] mb-2">Nourishing Shampoo</h3>
-            <p className="text-sm text-[#5f5e5e] mb-6 flex-grow">Deep hydration for all hair types.</p>
-            <div className="text-[#a83a00] font-bold text-2xl mb-4 font-mono">$24.00</div>
-            <button className="w-full bg-[#a83a00] text-white border border-[#8d7167] py-3 font-mono text-sm font-medium hover:bg-[#802a00] transition-colors">
-              Add to Cart
-            </button>
+        )) : (
+          <div className="md:col-span-3 border border-dashed border-[#8d7167] p-10 text-center text-[#594139] font-mono text-sm">
+            No products have been added yet. Add some from the admin products page.
           </div>
-        </div>
-
-        {/* Product 2 */}
-        <div className="bg-[#fff9ef] border border-[#8d7167] group hover:bg-[#f9f3ea] transition-colors duration-300 flex flex-col h-full">
-          <div className="relative h-64 border-b border-[#8d7167] overflow-hidden bg-[#645d53]">
-            <img 
-              className="w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-500" 
-              src="https://images.unsplash.com/photo-1608248597279-f99d160bfcbc?auto=format&fit=crop&q=80&w=800" 
-              alt="Organic Hair Oil"
-            />
-          </div>
-          <div className="p-6 flex flex-col flex-grow text-center">
-            <h3 className="font-bold text-xl text-[#1d1b16] mb-2">Organic Hair Oil</h3>
-            <p className="text-sm text-[#5f5e5e] mb-6 flex-grow">Pure argan oil for shine and strength.</p>
-            <div className="text-[#a83a00] font-bold text-2xl mb-4 font-mono">$32.00</div>
-            <button className="w-full bg-[#a83a00] text-white border border-[#8d7167] py-3 font-mono text-sm font-medium hover:bg-[#802a00] transition-colors">
-              Add to Cart
-            </button>
-          </div>
-        </div>
-
-        {/* Product 3 */}
-        <div className="bg-[#fff9ef] border border-[#8d7167] group hover:bg-[#f9f3ea] transition-colors duration-300 flex flex-col h-full">
-          <div className="relative h-64 border-b border-[#8d7167] overflow-hidden bg-[#645d53]">
-            <img 
-              className="w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-500" 
-              src="https://images.unsplash.com/photo-1594434296621-5135131953b6?auto=format&fit=crop&q=80&w=800" 
-              alt="Styling Clay"
-            />
-          </div>
-          <div className="p-6 flex flex-col flex-grow text-center">
-            <h3 className="font-bold text-xl text-[#1d1b16] mb-2">Matte Styling Clay</h3>
-            <p className="text-sm text-[#5f5e5e] mb-6 flex-grow">Strong hold with a natural finish.</p>
-            <div className="text-[#a83a00] font-bold text-2xl mb-4 font-mono">$18.00</div>
-            <button className="w-full bg-[#a83a00] text-white border border-[#8d7167] py-3 font-mono text-sm font-medium hover:bg-[#802a00] transition-colors">
-              Add to Cart
-            </button>
-          </div>
-        </div>
-
+        )}
       </div>
     </section>
 

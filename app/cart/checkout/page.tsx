@@ -1,19 +1,18 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { ArrowLeft, Info, WalletCards, UserRoundPlus } from 'lucide-react'
+import { ArrowLeft, Info, ShoppingBag, UserRoundPlus } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
+import { computeCartTotals, isGuestOrderEmail } from '@/lib/product-cart'
 import {
-  createBookingAndStartPayment,
-  createClientAccountForCheckout,
-} from '@/app/actions/client-booking-actions'
+  confirmProductOrderPaymentAction,
+  createClientAccountForProductOrderAction,
+} from '@/app/actions/product-actions'
 
 type PageProps = {
   searchParams: Promise<{
-    bookingId?: string
+    orderId?: string
   }>
 }
-
-const GUEST_EMAIL_PREFIX = 'guest-booking-'
 
 function formatKes(value: number) {
   return new Intl.NumberFormat('en-KE', {
@@ -24,38 +23,41 @@ function formatKes(value: number) {
   }).format(value)
 }
 
-export default async function CheckoutPage({ searchParams }: PageProps) {
+export default async function ProductCheckoutPage({ searchParams }: PageProps) {
   const params = await searchParams
-  const bookingId = params.bookingId
+  const orderId = params.orderId
 
-  if (!bookingId) {
-    redirect('/book/service')
+  if (!orderId) {
+    redirect('/cart')
   }
 
-  const booking = await prisma.booking.findFirst({
+  const order = await prisma.order.findFirst({
     where: {
-      id: bookingId,
+      id: orderId,
     },
     include: {
-      service: true,
       client: true,
-      worker: {
+      items: {
         include: {
-          user: true,
+          product: true,
         },
       },
     },
   })
 
-  if (!booking) {
-    redirect('/book/service')
+  if (!order) {
+    redirect('/cart')
   }
 
-  const startTime = booking.startTime
-  const checkoutUser = booking.client.email.startsWith(GUEST_EMAIL_PREFIX) ? null : booking.client
-  const subtotal = Number(booking.service.price)
-  const total = subtotal * 1.05
-  const deposit = total * 0.3
+  const checkoutUser = isGuestOrderEmail(order.client.email) ? null : order.client
+  const totals = computeCartTotals(
+    order.items.map((item) => ({
+      product: {
+        price: Number(item.unitPrice),
+      },
+      quantity: item.quantity,
+    }))
+  )
 
   return (
     <div className="min-h-screen bg-[#fff9ef] text-[#1d1b16]">
@@ -63,7 +65,7 @@ export default async function CheckoutPage({ searchParams }: PageProps) {
         <header className="mb-10 text-center">
           <h1 className="text-4xl font-semibold tracking-tight text-[#a83a00]">GLAMOUR</h1>
           <p className="mt-2 text-base text-[#5f5e5e]">
-            {checkoutUser ? 'Secure your booking with a 30% deposit.' : 'Create your client account to continue to payment.'}
+            {checkoutUser ? 'Finish paying for your saved product order.' : 'Create your client account to continue to product payment.'}
           </p>
         </header>
 
@@ -73,30 +75,34 @@ export default async function CheckoutPage({ searchParams }: PageProps) {
 
           <div className="border-b border-[#8d7167]/20 px-6 py-6 text-center">
             <p className="mb-1 text-xs font-bold uppercase tracking-widest text-[#594139]">
-              {checkoutUser ? 'Deposit Amount' : 'Saved Booking'}
+              {checkoutUser ? 'Order Total' : 'Saved Cart'}
             </p>
-            <p className="text-3xl font-semibold text-[#1d1b16]">{booking.service.name}</p>
+            <p className="text-3xl font-semibold text-[#1d1b16]">{order.items.length} Product Types</p>
             <p className="mt-1 text-xs text-[#5f5e5e]">
-              {booking.worker.user.name} • {new Intl.DateTimeFormat('en-KE', {
-                month: 'short',
-                day: 'numeric',
-                hour: 'numeric',
-                minute: '2-digit',
-              }).format(startTime)}
+              Order #{order.id.slice(0, 8)}
             </p>
-            {checkoutUser ? (
-              <>
-                <p className="mt-4 text-5xl font-semibold text-[#1d1b16]">{formatKes(deposit)}</p>
-                <p className="mt-1 text-xs text-[#5f5e5e]">30% of total {formatKes(total)}</p>
-              </>
-            ) : (
-              <p className="mt-4 text-sm text-[#5f5e5e]">This booking is already saved. Add the client account to continue.</p>
-            )}
+            <p className="mt-4 text-5xl font-semibold text-[#1d1b16]">{formatKes(totals.total)}</p>
+            <p className="mt-1 text-xs text-[#5f5e5e]">Includes tax and shipping</p>
+          </div>
+
+          <div className="px-6 py-5 border-b border-[#8d7167]/20">
+            <p className="font-mono text-xs font-bold uppercase tracking-widest text-[#594139] mb-3">Order Items</p>
+            <div className="space-y-3">
+              {order.items.map((item) => (
+                <div key={item.id} className="flex justify-between gap-4">
+                  <div>
+                    <p className="font-medium text-[#1d1b16]">{item.product.name}</p>
+                    <p className="text-xs text-[#5f5e5e]">Qty {item.quantity}</p>
+                  </div>
+                  <p className="font-mono text-sm">{formatKes(Number(item.unitPrice) * item.quantity)}</p>
+                </div>
+              ))}
+            </div>
           </div>
 
           {checkoutUser ? (
-            <form action={createBookingAndStartPayment} className="space-y-6 px-6 py-6">
-              <input type="hidden" name="bookingId" value={booking.id} />
+            <form action={confirmProductOrderPaymentAction} className="space-y-6 px-6 py-6">
+              <input type="hidden" name="orderId" value={order.id} />
 
               <div>
                 <label htmlFor="phone" className="mb-2 block text-sm font-medium text-[#1d1b16]">
@@ -122,64 +128,40 @@ export default async function CheckoutPage({ searchParams }: PageProps) {
                 type="submit"
                 className="flex w-full items-center justify-center gap-2 rounded border border-[#8d7167] bg-[#a83a00] px-4 py-3 text-sm font-medium text-white transition-all hover:bg-[#ff7033] active:scale-95"
               >
-                <WalletCards size={20} />
-                Pay via M-Pesa
+                <ShoppingBag size={20} />
+                Pay for Order
               </button>
             </form>
           ) : (
-            <form action={createClientAccountForCheckout} className="space-y-4 px-6 py-6">
-              <input type="hidden" name="bookingId" value={booking.id} />
+            <form action={createClientAccountForProductOrderAction} className="space-y-4 px-6 py-6">
+              <input type="hidden" name="orderId" value={order.id} />
 
               <div>
                 <label htmlFor="fullName" className="mb-2 block text-sm font-medium text-[#1d1b16]">
                   Full Name
                 </label>
-                <input
-                  id="fullName"
-                  name="fullName"
-                  type="text"
-                  required
-                  className="w-full rounded border border-[#8d7167] bg-white px-4 py-3 text-sm outline-none transition-colors focus:border-[#a83a00] focus:ring-1 focus:ring-[#a83a00]"
-                />
+                <input id="fullName" name="fullName" type="text" required className="w-full rounded border border-[#8d7167] bg-white px-4 py-3 text-sm outline-none transition-colors focus:border-[#a83a00] focus:ring-1 focus:ring-[#a83a00]" />
               </div>
 
               <div>
                 <label htmlFor="email" className="mb-2 block text-sm font-medium text-[#1d1b16]">
                   Email Address
                 </label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  required
-                  className="w-full rounded border border-[#8d7167] bg-white px-4 py-3 text-sm outline-none transition-colors focus:border-[#a83a00] focus:ring-1 focus:ring-[#a83a00]"
-                />
+                <input id="email" name="email" type="email" required className="w-full rounded border border-[#8d7167] bg-white px-4 py-3 text-sm outline-none transition-colors focus:border-[#a83a00] focus:ring-1 focus:ring-[#a83a00]" />
               </div>
 
               <div>
                 <label htmlFor="clientPhone" className="mb-2 block text-sm font-medium text-[#1d1b16]">
                   Phone Number
                 </label>
-                <input
-                  id="clientPhone"
-                  name="phone"
-                  type="tel"
-                  required
-                  className="w-full rounded border border-[#8d7167] bg-white px-4 py-3 text-sm outline-none transition-colors focus:border-[#a83a00] focus:ring-1 focus:ring-[#a83a00]"
-                />
+                <input id="clientPhone" name="phone" type="tel" required className="w-full rounded border border-[#8d7167] bg-white px-4 py-3 text-sm outline-none transition-colors focus:border-[#a83a00] focus:ring-1 focus:ring-[#a83a00]" />
               </div>
 
               <div>
                 <label htmlFor="password" className="mb-2 block text-sm font-medium text-[#1d1b16]">
                   Password
                 </label>
-                <input
-                  id="password"
-                  name="password"
-                  type="text"
-                  required
-                  className="w-full rounded border border-[#8d7167] bg-white px-4 py-3 text-sm outline-none transition-colors focus:border-[#a83a00] focus:ring-1 focus:ring-[#a83a00]"
-                />
+                <input id="password" name="password" type="text" required className="w-full rounded border border-[#8d7167] bg-white px-4 py-3 text-sm outline-none transition-colors focus:border-[#a83a00] focus:ring-1 focus:ring-[#a83a00]" />
               </div>
 
               <button
@@ -196,19 +178,16 @@ export default async function CheckoutPage({ searchParams }: PageProps) {
             <Info size={24} className="shrink-0 text-[#a83a00]" />
             <p className="text-sm text-[#594139]">
               {checkoutUser
-                ? 'For this demo, paying now updates the existing booking and marks the deposit step as complete.'
-                : 'For this demo, the booking is already in the database before account creation. This step only attaches the real client to that saved booking.'}
+                ? 'For this demo, payment confirms the saved order and deducts stock from inventory immediately.'
+                : 'For this demo, the order row is already saved before account creation. This step only attaches the real client account.'}
             </p>
           </div>
         </div>
 
         <div className="mt-6 text-center">
-          <Link
-            href={`/book/summary?serviceId=${encodeURIComponent(booking.service.id)}&workerId=${encodeURIComponent(booking.worker.id)}&start=${encodeURIComponent(startTime.toISOString())}`}
-            className="inline-flex items-center gap-2 text-sm font-medium text-[#5f5e5e] transition-colors hover:text-[#a83a00]"
-          >
+          <Link href="/cart" className="inline-flex items-center gap-2 text-sm font-medium text-[#5f5e5e] transition-colors hover:text-[#a83a00]">
             <ArrowLeft size={16} />
-            Back to Summary
+            Back to Cart
           </Link>
         </div>
       </div>

@@ -5,9 +5,7 @@ declare module 'next-auth' {
   interface User {
     id: string
     role: Role
-    salonId: string
     salonName: string
-    salonSubdomain: string
     phone: string
     workerProfile?: WorkerProfile | null
   }
@@ -18,9 +16,7 @@ declare module 'next-auth' {
       email: string
       name: string
       role: Role
-      salonId: string
       salonName: string
-      salonSubdomain: string
       phone: string
       workerProfile?: WorkerProfile | null
     }
@@ -31,9 +27,7 @@ declare module 'next-auth/jwt' {
   interface JWT {
     id: string
     role: Role
-    salonId: string
     salonName: string
-    salonSubdomain: string
     phone: string
     workerProfile?: WorkerProfile | null
   }

@@ -1,6 +1,6 @@
 # 🗺️ Step-by-Step Development Blueprint
 
-To build this Multi-Tenant Salon SaaS efficiently, we will build from the "inside out." We start by building the Admin dashboard to insert data (Services, Workers), then build the Client facing pages to consume that data, and finally wrap it up with the M-Pesa payments.
+To build this salon management app efficiently, we will build from the "inside out." We start by building the Admin dashboard to insert data (Services, Workers), then build the Client facing pages to consume that data, and finally wrap it up with the M-Pesa payments.
 
 ---
 
@@ -50,20 +50,20 @@ All routes here verify the user has `role: "WORKER"`.
 
 ## Phase 4: The Client Storefront & Booking Flow
 
-This is where the magic happens. We use Next.js Dynamic Routes (`[subdomain]`) so every salon gets its own unique URL (e.g., `app.yourdomain.com/duchessehair`).
+This is where the magic happens. The public booking flow lives directly in the app without tenant subdomain routing.
 
-- **`app/[subdomain]/layout.tsx`:** Fetches the Salon details based on the URL subdomain to display the correct Salon Name and branding in the header.
+- **`app/layout.tsx`:** Provides the shared salon branding and global providers.
 
-- **`app/[subdomain]/page.tsx`:** The Salon's public landing page. Displays a list of their Services and Products. Contains a big "Book Appointment" button.
+- **`app/(marketing)/page.tsx`:** The salon's public landing page. Displays a list of their Services and Products. Contains a big "Book Appointment" button.
 
-- **`app/[subdomain]/book/page.tsx`:**
+- **`app/book/service/page.tsx`:**
   - **Step 1:** User selects a Service (e.g., Knotless Braids).
 
-- **`app/[subdomain]/book/datetime/page.tsx`:**
+- **`app/book/datetime/page.tsx`:**
   - **Step 2:** User picks a Date.
   - **Crucial Logic:** Your UI fetches available workers for that date using the Scheduling Engine logic we discussed. It displays open time slots. User selects a Time & a Worker.
 
-- **`app/[subdomain]/checkout/page.tsx`:**
+- **`app/book/checkout/page.tsx`:**
   - **Step 3:** Order summary. The user enters their Safaricom Phone Number and clicks "Pay with M-Pesa."
 
 ---
@@ -78,4 +78,4 @@ This ties the client checkout to the real world.
   - Safaricom sends the success/failure JSON payload here.
   - The function updates the `Booking` status in the database to `CONFIRMED`.
 
-- **`app/[subdomain]/checkout/success/page.tsx`:** Uses Supabase Realtime to listen for the database change from `PENDING_PAYMENT` to `CONFIRMED`. Once detected, it shows a giant green checkmark to the user.
+- **`app/book/checkout/success/page.tsx`:** Can show the final confirmed state once payment confirmation is wired in.

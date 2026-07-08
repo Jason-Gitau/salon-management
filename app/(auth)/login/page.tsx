@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -15,12 +16,8 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>
 
-const PLACEHOLDER_HINTS = [
-  { label: 'Admin', email: 'admin@salon.local', password: 'admin1234' },
-  { label: 'Worker', email: 'worker@salon.local', password: 'worker1234' },
-]
-
 export default function LoginPage() {
+  const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
@@ -51,12 +48,12 @@ export default function LoginPage() {
       })
 
       if (result?.error) {
-        toast.error('Use the placeholder admin or worker credentials')
+        toast.error('Use the admin demo account or a worker account created from the staff page')
         return
       }
 
       toast.success('Login successful')
-      window.location.href = result?.url ?? target
+      router.push(result?.url ?? target)
     } catch {
       toast.error('An error occurred during login')
     } finally {
@@ -122,8 +119,8 @@ export default function LoginPage() {
                   </span>
                 </h1>
                 <p className="mt-5 max-w-sm text-base leading-7 text-[#5f5e5e]">
-                  Use your placeholder admin or worker credentials to enter the correct
-                  salon workspace. Admin routes to the dashboard. Worker routes to the schedule.
+                  Admin still uses the demo credentials. Workers now sign in with the
+                  email and password assigned when their account was created from the staff page.
                 </p>
 
                 <div className="mt-8 grid gap-4 sm:grid-cols-2">
@@ -138,8 +135,8 @@ export default function LoginPage() {
                     <p className="font-mono text-[10px] uppercase tracking-widest text-[#5f5e5e]">
                       Worker
                     </p>
-                    <p className="mt-2 font-semibold text-[#1d1b16]">worker@salon.local</p>
-                    <p className="font-mono text-xs text-[#5f5e5e]">worker1234</p>
+                    <p className="mt-2 font-semibold text-[#1d1b16]">Use assigned credentials</p>
+                    <p className="font-mono text-xs text-[#5f5e5e]">Created from Staff page</p>
                   </div>
                 </div>
               </div>
@@ -172,7 +169,7 @@ export default function LoginPage() {
                     lock
                   </span>
                   <span className="font-mono text-[11px] uppercase tracking-widest text-[#5f5e5e]">
-                    Placeholder auth
+                    Mixed demo auth
                   </span>
                 </div>
               </div>

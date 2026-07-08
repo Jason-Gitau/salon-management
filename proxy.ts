@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { AUTH_SECRET } from './lib/auth-secret'
 import type { Role } from './lib/auth-types'
 
-const protectedRoutes = ['/dashboard', '/activities', '/service', '/staff', '/products', '/schedule', '/earnings', '/profile', '/worker-profile', '/book/checkout']
+const protectedRoutes = ['/dashboard', '/activities', '/service', '/staff', '/products', '/schedule', '/earnings', '/profile', '/worker-profile']
 
 function getRoleHome(role: Role | undefined) {
   if (role === 'OWNER') return '/dashboard'
@@ -36,5 +36,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/login', '/signup', '/dashboard/:path*', '/activities/:path*', '/service/:path*', '/staff/:path*', '/products/:path*', '/schedule/:path*', '/earnings/:path*', '/profile/:path*', '/worker-profile/:path*', '/book/checkout/:path*'],
+  matcher: ['/login', '/signup', '/dashboard/:path*', '/activities/:path*', '/service/:path*', '/staff/:path*', '/products/:path*', '/schedule/:path*', '/earnings/:path*', '/profile/:path*', '/worker-profile/:path*'],
 }

@@ -2,7 +2,7 @@
 
 ## 1. Executive Summary
 
-This project is a **Multi-Tenant Vertical SaaS** designed specifically for salons in the Kenyan market. It handles client bookings, worker schedules, service commissions, and product sales, culminating in an automated M-Pesa STK push integration.
+This project is salon management software designed for a single salon in the Kenyan market. It handles client bookings, worker schedules, service commissions, and product sales, culminating in an automated M-Pesa STK push integration.
 
 ---
 
@@ -16,21 +16,14 @@ This project is a **Multi-Tenant Vertical SaaS** designed specifically for salon
 
 ---
 
-## 3. Database Architecture & Multi-Tenancy
-
-### The Multi-Tenant Approach
-
-We are using a **Row-Level Multi-Tenancy** approach. This means all clients share the same database tables, but every piece of data is scoped to a specific Salon.
-
-- **Rule of Thumb:** Every table (except the root `Salon` table) must have a `salonId` foreign key.
-- **Security:** Every database query in our Next.js Server Actions must filter by the authenticated user's `salonId` to prevent data leaks between different salons.
+## 3. Database Architecture
 
 ### Core Entities
 
-- **Salon:** The root tenant. Contains the subdomain, branding, and links all other records.
-- **User:** Central identity. A user can be a `CLIENT`, `WORKER`, or `OWNER` based on their role within a specific salon.
+- **Salon:** The root business profile. Contains branding, contact details, and links operational records.
+- **User:** Central identity. A user can be a `CLIENT`, `WORKER`, or `OWNER`.
 - **WorkerProfile:** Extends the `User` model for staff, containing their commission rates and availability.
-- **Service & Product:** Catalog items specific to a salon.
+- **Service & Product:** Catalog items managed by the salon.
 - **Booking:** The transactional core. Links a `Client`, `Worker`, `Service`, and tracks time and M-Pesa payment status.
 
 ---

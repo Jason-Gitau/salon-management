@@ -4,7 +4,7 @@ import Providers from "./providers";
 
 export const metadata: Metadata = {
   title: "Salon Manager",
-  description: "Multi-tenant salon SaaS for bookings, staff, and payments.",
+  description: "Salon management software for bookings, staff, and payments.",
 };
 
 export default function RootLayout({
